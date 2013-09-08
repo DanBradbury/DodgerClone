@@ -25,7 +25,8 @@ def draw_lives(icon, num_lives):
 		screen.blit(icon, (x_coord, 5))
 		x_coord += 25
 		lives -= 1
-		
+def display_game_over():
+	screen.blit(game_over_text, [250, 250])		
 def display_level(texts):
 	if show_level == True:
 		screen.blit(texts, [250,250])
@@ -40,14 +41,34 @@ def cleanup_enemies():
 			points += 5
 			enemies.remove(each)
 	return points
-def control_enemies():
+def control_enemies(lives):
+	new_lives = lives
 	if start_level == True:
 		if len(enemies) <= 2:
 			enemies.append( [random.randint(50, 400), random.randint(-100, 0)] ) 
-		move_enemies()
-def move_enemies():
+		new_lives = move_enemies(lives)
+	return new_lives
+def check_collision(enemy_coords, name):
+	left1, left2 = enemy_coords[0], player_coords[0]
+	right1, right2 = enemy_coords[0]+50, player_coords[0]+75
+	top1, top2 = enemy_coords[1], player_coords[1]
+	bottom1, bottom2 = enemy_coords[1]+50, player_coords[1]+75
+	
+	if bottom1 < top2:
+		return 0
+	if top1 > bottom2:
+		return 0
+	if right1 < left2:
+		return 0
+	if left1 > right2:
+		return 0
+	if name == 'flyer':
+		
+		return 1	
+def move_enemies(lives):
 	if current_level == 1:
 		count = 0
+		new_lives = lives
 		for each in enemies:
 			count += 1
 			'''THE LEVEL 1 EFFECT
@@ -62,6 +83,12 @@ def move_enemies():
 				each[1] += 15
 			else:
 				each[1] += 9
+			#there is a collision
+			if check_collision(each, 'flyer') == 1:
+				enemies.remove(each)
+				new_lives -= 1
+		return new_lives
+				
 		
 def draw_enemies():
 	for each in enemies:
@@ -96,6 +123,7 @@ FONT = pygame.font.Font(None, 25)
 text = FONT.render("PRESS ENTER TO START", True, WHITE)
 level1_text = FONT.render("LEVEL 1", True, WHITE)
 score_text = FONT.render("Score: "+str(score), True, GREEN)
+game_over_text = FONT.render("GAME OVER!", True, RED)
 # Set the width and height of the window
 size = (700,500)
 screen = pygame.display.set_mode(size)
@@ -115,6 +143,7 @@ enemies = []
 started = False 
 show_level = False
 start_level = False
+game_over = False
 current_level = 0
 num_lives = 3
 while done == False:
@@ -150,14 +179,19 @@ while done == False:
 		pygame.time.set_timer(pygame.USEREVENT+1,1500)
   
 # ALL GAME LOGIC SHOULD GO BELOW
-  control_enemies()
+  num_lives = control_enemies(num_lives)
+  if num_lives == 0:
+  	game_over = True
   score += cleanup_enemies()
 # ALL CODE TO DRAW SHOULD GO BELOW
   screen.fill(BLACK)
-  display_level(level1_text)
-  draw_instructions(num_lives)
-  draw_player()
-  draw_enemies()
+  if game_over == True:
+  	display_game_over()
+  else:
+	  display_level(level1_text)
+	  draw_instructions(num_lives)
+	  draw_player()
+	  draw_enemies()
   pygame.display.flip()
  
   clock.tick(20)
