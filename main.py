@@ -1,4 +1,4 @@
-import pygame, random, time
+import pygame, random, time, os	
 from threading import Timer
 '''
 All functions should be moved elsewhere but this is a single file project so yea
@@ -41,12 +41,12 @@ def cleanup_enemies():
 			points += 5
 			enemies.remove(each)
 	return points
-def control_enemies(lives):
+def control_enemies(lives, hit):
 	new_lives = lives
 	if start_level == True:
 		if len(enemies) <= 2:
 			enemies.append( [random.randint(50, 400), random.randint(-100, 0)] ) 
-		new_lives = move_enemies(lives)
+		new_lives = move_enemies(lives, hit)
 	return new_lives
 def check_collision(enemy_coords, name):
 	left1, left2 = enemy_coords[0], player_coords[0]
@@ -65,7 +65,7 @@ def check_collision(enemy_coords, name):
 	if name == 'flyer':
 		
 		return 1	
-def move_enemies(lives):
+def move_enemies(lives, hit_sound):
 	if current_level == 1:
 		count = 0
 		new_lives = lives
@@ -87,6 +87,7 @@ def move_enemies(lives):
 			if check_collision(each, 'flyer') == 1:
 				enemies.remove(each)
 				new_lives -= 1
+				hit_sound.play()
 		return new_lives
 				
 		
@@ -110,6 +111,7 @@ def stop_move():
 def increase_score(score, value):
 	new_score = score + value
 	return new_score
+pygame.mixer.pre_init(44100, -16,2, 2048)
 pygame.init()
  
 # Define some color
@@ -119,6 +121,9 @@ GREEN = ( 0, 255, 0 )
 RED = ( 255, 0 , 0 )
 # define gameplay related features
 score = 0
+pygame.mixer.music.load(os.path.join('sound', 'stardust.ogg'))
+hit = pygame.mixer.Sound(os.path.join('sound', 'hit.wav'))
+over = pygame.mixer.Sound(os.path.join('sound', 'over.wav'))
 FONT = pygame.font.Font(None, 25)
 text = FONT.render("PRESS ENTER TO START", True, WHITE)
 level1_text = FONT.render("LEVEL 1", True, WHITE)
@@ -146,6 +151,7 @@ start_level = False
 game_over = False
 current_level = 0
 num_lives = 3
+pygame.mixer.music.play(-1)
 while done == False:
   # ALL EVENT PROCESSING SHOULD GO BELOW
   for event in pygame.event.get():
@@ -158,11 +164,11 @@ while done == False:
     		stop_move()
     	elif event.key == pygame.K_LEFT:
     		stop_move()
-    #Game start EVENT
+    #Level 1 Start EVENT
     if event.type == pygame.USEREVENT+1:
-    	show_level = False
-    	start_level = True
-    	current_level = 1
+		show_level = False
+		start_level = True
+	  	current_level = 1
   keys_pressed = pygame.key.get_pressed()
   if keys_pressed[pygame.K_UP]:
   	move_up()
@@ -179,9 +185,11 @@ while done == False:
 		pygame.time.set_timer(pygame.USEREVENT+1,1500)
   
 # ALL GAME LOGIC SHOULD GO BELOW
-  num_lives = control_enemies(num_lives)
+  num_lives = control_enemies(num_lives, hit)
   if num_lives == 0:
+  	pygame.mixer.music.fadeout(1000)
   	game_over = True
+  	over.play()
   score += cleanup_enemies()
 # ALL CODE TO DRAW SHOULD GO BELOW
   screen.fill(BLACK)
