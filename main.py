@@ -3,6 +3,77 @@ from threading import Timer
 '''
 All functions should be moved elsewhere but this is a single file project so yea
 '''
+def display_game_over():
+	screen.blit(game_over_text, [250, 250])		
+def display_level(texts):
+	if show_level == True:
+		screen.blit(texts, [250,250])
+def turn_on_level_label():
+	show_level = True
+def turn_off_level_label(show_level):
+	show_level = False
+def cleanup_enemies():
+	points = 0
+	for each in enemies:
+		if each[1] > 500:
+			points += 5
+			enemies.remove(each)
+	return points
+def control_enemies(lives, hit, level):
+	new_lives = lives
+	if start_level == True:
+		if level == 1:
+			if len(enemies) <= 5:
+				enemies.append( [random.randint(5, 700), random.randint(-150, 0)] ) 
+			new_lives = move_enemies(lives, hit, level)
+	return new_lives
+def check_collision(enemy_coords, name):
+	left1, left2 = enemy_coords[0], player_coords[0]
+	right1, right2 = enemy_coords[0]+50, player_coords[0]+75
+	top1, top2 = enemy_coords[1], player_coords[1]
+	bottom1, bottom2 = enemy_coords[1]+50, player_coords[1]+75
+	
+	if bottom1 < top2:
+		return 0
+	if top1 > bottom2:
+		return 0
+	if right1 < left2:
+		return 0
+	if left1 > right2:
+		return 0
+	if name == 'flyer':	
+		return 1	
+def move_enemies(lives, hit_sound, level):
+	count = 0
+	new_lives = lives
+	for each in enemies:
+		count += 1
+		if level == 1:
+			'''THE LEVEL 1 EFFECT
+					makes the second enemy fall down and across the screen faster
+					forces enemies to 'jerk' at times when quick enemies are being removed
+			'''
+			if count == 2:
+				if each[0] > 0:
+					each[0] += 7
+					each[1] += 15
+				elif each[0] < 700:
+					each[0] -= 7	
+					each[1] += 15
+			elif count == 3:
+				each[1] += 20
+			else:
+				each[1] += 9
+			#there is a collision
+			if check_collision(each, 'flyer') == 1:
+				enemies.remove(each)
+				new_lives -= 1
+				hit_sound.play()
+	return new_lives
+'''All draw functions go below here'''						
+def draw_enemies():
+	for each in enemies:
+		screen.blit(enemy_img, each)
 def draw_instructions(lives):
   if started == False:
   	screen.blit(text, [250,250])
@@ -25,75 +96,7 @@ def draw_lives(icon, num_lives):
 		screen.blit(icon, (x_coord, 5))
 		x_coord += 25
 		lives -= 1
-def display_game_over():
-	screen.blit(game_over_text, [250, 250])		
-def display_level(texts):
-	if show_level == True:
-		screen.blit(texts, [250,250])
-def turn_on_level_label():
-	show_level = True
-def turn_off_level_label(show_level):
-	show_level = False
-def cleanup_enemies():
-	points = 0
-	for each in enemies:
-		if each[1] > 500:
-			points += 5
-			enemies.remove(each)
-	return points
-def control_enemies(lives, hit):
-	new_lives = lives
-	if start_level == True:
-		if len(enemies) <= 2:
-			enemies.append( [random.randint(50, 400), random.randint(-100, 0)] ) 
-		new_lives = move_enemies(lives, hit)
-	return new_lives
-def check_collision(enemy_coords, name):
-	left1, left2 = enemy_coords[0], player_coords[0]
-	right1, right2 = enemy_coords[0]+50, player_coords[0]+75
-	top1, top2 = enemy_coords[1], player_coords[1]
-	bottom1, bottom2 = enemy_coords[1]+50, player_coords[1]+75
-	
-	if bottom1 < top2:
-		return 0
-	if top1 > bottom2:
-		return 0
-	if right1 < left2:
-		return 0
-	if left1 > right2:
-		return 0
-	if name == 'flyer':
-		
-		return 1	
-def move_enemies(lives, hit_sound):
-	if current_level == 1:
-		count = 0
-		new_lives = lives
-		for each in enemies:
-			count += 1
-			'''THE LEVEL 1 EFFECT
-				makes the second enemy fall down and across the screen faster
-				forces enemies to 'jerk' at times when quick enemies are being removed
-			'''
-			if count == 2:
-				if each[0] > 0:
-					each[0] += 7
-				elif each[0] < 700:
-					each[0] -= 7	
-				each[1] += 15
-			else:
-				each[1] += 9
-			#there is a collision
-			if check_collision(each, 'flyer') == 1:
-				enemies.remove(each)
-				new_lives -= 1
-				hit_sound.play()
-		return new_lives
-				
-		
-def draw_enemies():
-	for each in enemies:
-		screen.blit(enemy_img, each)
+''' Player controls (score, movement, etc) go below here '''
 def move_up():
 	player_coords[1] -= y_speed
 	moving = True
@@ -111,6 +114,8 @@ def stop_move():
 def increase_score(score, value):
 	new_score = score + value
 	return new_score
+
+''' Pre-main game loop init stuff goes below this '''
 pygame.mixer.pre_init(44100, -16,2, 2048)
 pygame.init()
  
@@ -124,25 +129,27 @@ score = 0
 pygame.mixer.music.load(os.path.join('sound', 'stardust.ogg'))
 hit = pygame.mixer.Sound(os.path.join('sound', 'hit.wav'))
 over = pygame.mixer.Sound(os.path.join('sound', 'over.wav'))
+player_img = pygame.image.load("img/player.png")
+enemy_img = pygame.image.load("img/flyer.png")
+
 FONT = pygame.font.Font(None, 25)
 text = FONT.render("PRESS ENTER TO START", True, WHITE)
 level1_text = FONT.render("LEVEL 1", True, WHITE)
 score_text = FONT.render("Score: "+str(score), True, GREEN)
 game_over_text = FONT.render("GAME OVER!", True, RED)
+
 # Set the width and height of the window
 size = (700,500)
 screen = pygame.display.set_mode(size)
-pygame.display.set_caption("Play Dodger")
- 
-#Loop until user clicks close
-done = False
+pygame.display.set_caption("Yet Another Dodger Clone")
+
+#initialize some extra game management
 clock = pygame.time.Clock()
 player_coords = [450, 400]
 x_speed = 11
 y_speed = 10
+num_lives = 3
 moving = False
-player_img = pygame.image.load("img/player.png")
-enemy_img = pygame.image.load("img/flyer.png")
 enemies = []
 # Game management flags
 started = False 
@@ -150,7 +157,9 @@ show_level = False
 start_level = False
 game_over = False
 current_level = 0
-num_lives = 3
+ 
+#Loop until user clicks close
+done = False
 pygame.mixer.music.play(-1)
 while done == False:
   # ALL EVENT PROCESSING SHOULD GO BELOW
@@ -185,7 +194,7 @@ while done == False:
 		pygame.time.set_timer(pygame.USEREVENT+1,1500)
   
 # ALL GAME LOGIC SHOULD GO BELOW
-  num_lives = control_enemies(num_lives, hit)
+  num_lives = control_enemies(num_lives, hit, current_level)
   if num_lives == 0:
   	pygame.mixer.music.fadeout(1000)
   	game_over = True
